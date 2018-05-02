@@ -13,6 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 """Example code for TensorFlow Wide & Deep Tutorial using tf.estimator API."""
+# refereces : https://tensorflowkorea.gitbooks.io/tensorflow-kr/content/g3doc/tutorials/wide_and_deep/
+#             http://bcho.tistory.com/tag/wide%20and%20deep%20model
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -26,6 +28,9 @@ import tensorflow as tf  # pylint: disable=g-bad-import-order
 
 from official.utils.arg_parsers import parsers
 from official.utils.logging import hooks_helper
+
+# tf.enable_eager_execution()
+from tensorflow.python import debug as tf_debug
 
 _CSV_COLUMNS = [
     'age', 'workclass', 'fnlwgt', 'education', 'education_num',
@@ -87,6 +92,7 @@ def build_model_columns():
       age_buckets,
   ]
 
+  # https://www.tensorflow.org/api_docs/python/tf/contrib/layers/crossed_column
   crossed_columns = [
       tf.feature_column.crossed_column(
           ['education', 'occupation'], hash_bucket_size=1000),
@@ -96,6 +102,7 @@ def build_model_columns():
 
   wide_columns = base_columns + crossed_columns
 
+  # https://www.tensorflow.org/api_docs/python/tf/feature_column/indicator_column
   deep_columns = [
       age,
       education_num,
@@ -107,6 +114,7 @@ def build_model_columns():
       tf.feature_column.indicator_column(marital_status),
       tf.feature_column.indicator_column(relationship),
       # To show an example of embedding
+      # https://www.tensorflow.org/api_docs/python/tf/feature_column/embedding_column
       tf.feature_column.embedding_column(occupation, dimension=8),
   ]
 
@@ -135,6 +143,7 @@ def build_estimator(model_dir, model_type):
         hidden_units=hidden_units,
         config=run_config)
   else:
+    # https://www.tensorflow.org/api_docs/python/tf/estimator/DNNLinearCombinedClassifier
     return tf.estimator.DNNLinearCombinedClassifier(
         model_dir=model_dir,
         linear_feature_columns=wide_columns,
@@ -179,6 +188,7 @@ def main(argv):
   shutil.rmtree(flags.model_dir, ignore_errors=True)
   model = build_estimator(flags.model_dir, flags.model_type)
 
+
   train_file = os.path.join(flags.data_dir, 'adult.data')
   test_file = os.path.join(flags.data_dir, 'adult.test')
 
@@ -189,10 +199,14 @@ def main(argv):
   def eval_input_fn():
     return input_fn(test_file, 1, False, flags.batch_size)
 
-  train_hooks = hooks_helper.get_train_hooks(
-      flags.hooks, batch_size=flags.batch_size,
-      tensors_to_log={'average_loss': 'head/truediv',
-                      'loss': 'head/weighted_loss/Sum'})
+  # Graphs
+  # train_hooks = hooks_helper.get_train_hooks(
+  #     flags.hooks, batch_size=flags.batch_size,
+  #     tensors_to_log={'average_loss': 'head/truediv',
+  #                     'loss': 'head/weighted_loss/Sum'})
+
+  # tensorboard debugger
+  train_hooks = [tf_debug.TensorBoardDebugHook("localhost:6005")]
 
   # Train and evaluate the model every `FLAGS.epochs_between_evals` epochs.
   for n in range(flags.train_epochs // flags.epochs_between_evals):
@@ -218,11 +232,12 @@ class WideDeepArgParser(argparse.ArgumentParser):
         help='[default %(default)s] Valid model types: wide, deep, wide_deep.',
         metavar='<MT>')
     self.set_defaults(
-        data_dir='/tmp/census_data',
-        model_dir='/tmp/census_model',
+        data_dir='./census_data',
+        model_dir='./census_model',
         train_epochs=40,
         epochs_between_evals=2,
-        batch_size=40)
+        batch_size=40,
+        epochs_per_eval=2)
 
 
 if __name__ == '__main__':
