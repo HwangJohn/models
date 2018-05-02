@@ -71,7 +71,7 @@ class Cifar10DataSet(object):
     """Read the images and labels from 'filenames'."""
     filenames = self.get_filenames()
     # Repeat infinitely.
-    dataset = tf.contrib.data.TFRecordDataset(filenames).repeat()
+    dataset = tf.data.TFRecordDataset(filenames).repeat()
 
     # Parse records.
     dataset = dataset.map(
