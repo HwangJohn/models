@@ -200,13 +200,13 @@ def main(argv):
     return input_fn(test_file, 1, False, flags.batch_size)
 
   # Graphs
-  # train_hooks = hooks_helper.get_train_hooks(
-  #     flags.hooks, batch_size=flags.batch_size,
-  #     tensors_to_log={'average_loss': 'head/truediv',
-  #                     'loss': 'head/weighted_loss/Sum'})
+  train_hooks = hooks_helper.get_train_hooks(
+      flags.hooks, batch_size=flags.batch_size,
+      tensors_to_log={'average_loss': 'head/truediv',
+                      'loss': 'head/weighted_loss/Sum'})
 
   # tensorboard debugger
-  train_hooks = [tf_debug.TensorBoardDebugHook("localhost:6005")]
+  # train_hooks = [tf_debug.TensorBoardDebugHook("localhost:6005")]
 
   # Train and evaluate the model every `FLAGS.epochs_between_evals` epochs.
   for n in range(flags.train_epochs // flags.epochs_between_evals):
