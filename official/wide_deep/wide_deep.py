@@ -121,15 +121,20 @@ def build_model_columns():
   return wide_columns, deep_columns
 
 
-def build_estimator(model_dir, model_type):
+def build_estimator(model_dir, model_type, machine_type):
   """Build an estimator appropriate for the given model type."""
   wide_columns, deep_columns = build_model_columns()
   hidden_units = [100, 75, 50, 25]
 
   # Create a tf.estimator.RunConfig to ensure the model is run on CPU, which
   # trains faster than GPU for this model.
-  run_config = tf.estimator.RunConfig().replace(
-      session_config=tf.ConfigProto(device_count={'GPU': 2}))
+
+  if machine_type == "CPU":
+      run_config = tf.estimator.RunConfig().replace(
+          session_config=tf.ConfigProto(device_count={'GPU': 0}))
+  else:
+      run_config = tf.estimator.RunConfig().replace(
+          session_config=tf.ConfigProto(device_count={'GPU': 2}))
 
   if model_type == 'wide':
     return tf.estimator.LinearClassifier(
@@ -197,7 +202,7 @@ def main(argv):
       # Clean up the model directory if present
       shutil.rmtree(flags.model_dir, ignore_errors=True)
 
-  model = build_estimator(flags.model_dir, flags.model_type)
+  model = build_estimator(flags.model_dir, flags.model_type, flags.machine_type)
 
   train_file = os.path.join(flags.data_dir, 'adult.data')
   test_file = os.path.join(flags.data_dir, 'adult.test')
@@ -251,10 +256,14 @@ class WideDeepArgParser(argparse.ArgumentParser):
         '--execute_type', '-et', type=str, default='train',
         choices=['train', 'test'],
         help='[default %(default)s] model execution types: train, test.')
+    self.add_argument(
+        '--machine_type', '-mct', type=str, default='GPU',
+        choices=['CPU', 'GPU'],
+        help='[default %(default)s] machine execution types: CPU, GPU.')
     self.set_defaults(
         data_dir='./census_data',
         model_dir='./census_model',
-        train_epochs=2,
+        train_epochs=40,
         epochs_between_evals=2,
         batch_size=40,
         epochs_per_eval=2)
