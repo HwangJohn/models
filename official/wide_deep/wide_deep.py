@@ -129,7 +129,7 @@ def build_estimator(model_dir, model_type):
   # Create a tf.estimator.RunConfig to ensure the model is run on CPU, which
   # trains faster than GPU for this model.
   run_config = tf.estimator.RunConfig().replace(
-      session_config=tf.ConfigProto(device_count={'GPU': 0}))
+      session_config=tf.ConfigProto(device_count={'GPU': 2}))
 
   if model_type == 'wide':
     return tf.estimator.LinearClassifier(
@@ -180,14 +180,24 @@ def input_fn(data_file, num_epochs, shuffle, batch_size):
   return dataset
 
 
+def exec_eval(flags, model, eval_input_fn):
+    results = model.evaluate(input_fn=eval_input_fn)
+    for key in sorted(results):
+        print('%s: %s' % (key, results[key]))
+
+
+
 def main(argv):
   parser = WideDeepArgParser()
   flags = parser.parse_args(args=argv[1:])
 
-  # Clean up the model directory if present
-  shutil.rmtree(flags.model_dir, ignore_errors=True)
-  model = build_estimator(flags.model_dir, flags.model_type)
 
+
+  if flags.execute_type == "train":
+      # Clean up the model directory if present
+      shutil.rmtree(flags.model_dir, ignore_errors=True)
+
+  model = build_estimator(flags.model_dir, flags.model_type)
 
   train_file = os.path.join(flags.data_dir, 'adult.data')
   test_file = os.path.join(flags.data_dir, 'adult.test')
@@ -204,6 +214,12 @@ def main(argv):
       flags.hooks, batch_size=flags.batch_size,
       tensors_to_log={'average_loss': 'head/truediv',
                       'loss': 'head/weighted_loss/Sum'})
+
+  if flags.execute_type == "test":
+
+      exec_eval(flags, model, eval_input_fn)
+
+      exit(0)
 
   # tensorboard debugger
   # train_hooks = [tf_debug.TensorBoardDebugHook("localhost:6005")]
@@ -231,10 +247,14 @@ class WideDeepArgParser(argparse.ArgumentParser):
         choices=['wide', 'deep', 'wide_deep'],
         help='[default %(default)s] Valid model types: wide, deep, wide_deep.',
         metavar='<MT>')
+    self.add_argument(
+        '--execute_type', '-et', type=str, default='train',
+        choices=['train', 'test'],
+        help='[default %(default)s] model execution types: train, test.')
     self.set_defaults(
         data_dir='./census_data',
         model_dir='./census_model',
-        train_epochs=40,
+        train_epochs=2,
         epochs_between_evals=2,
         batch_size=40,
         epochs_per_eval=2)
