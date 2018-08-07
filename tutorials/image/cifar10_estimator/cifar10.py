@@ -77,7 +77,7 @@ class Cifar10DataSet(object):
     # dataset = dataset.map(
     #     self.parser, num_threads=batch_size, output_buffer_size=2 * batch_size)
     dataset = dataset.map(
-      self.parser, num_parallel_calls=batch_size)
+        self.parser, num_parallel_calls=batch_size)
 
     # Potentially shuffle records.
     if self.subset == 'train':
