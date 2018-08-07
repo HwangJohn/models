@@ -36,6 +36,7 @@ import sys
 
 import tensorflow as tf
 
+from tensorflow.python import debug as tf_debug
 
 def get_num_classes():
   classes = []
@@ -84,6 +85,7 @@ def get_input_fn(mode, tfrecord_pattern, batch_size):
       - `Tensor` of target labels.
     """
     dataset = tf.data.TFRecordDataset.list_files(tfrecord_pattern)
+
     if mode == tf.estimator.ModeKeys.TRAIN:
       dataset = dataset.shuffle(buffer_size=10)
     dataset = dataset.repeat()
@@ -102,7 +104,12 @@ def get_input_fn(mode, tfrecord_pattern, batch_size):
     dataset = dataset.padded_batch(
         batch_size, padded_shapes=dataset.output_shapes)
     features, labels = dataset.make_one_shot_iterator().get_next()
+    # with tf.Session() as sess:
+    #     tf.global_variables_initializer()
+    #     f,l = sess.run([features, labels])
     return features, labels
+
+
 
   return _input_fn
 
@@ -268,10 +275,15 @@ def create_estimator_and_specs(run_config):
       config=run_config,
       params=model_params)
 
+  debug_hook = tf_debug.TensorBoardDebugHook(FLAGS.tensorboard_debug_address)
+  hooks = [debug_hook]
+
   train_spec = tf.estimator.TrainSpec(input_fn=get_input_fn(
       mode=tf.estimator.ModeKeys.TRAIN,
       tfrecord_pattern=FLAGS.training_data,
-      batch_size=FLAGS.batch_size), max_steps=FLAGS.steps)
+      batch_size=FLAGS.batch_size),
+      hooks=hooks,
+      max_steps=FLAGS.steps)
 
   eval_spec = tf.estimator.EvalSpec(input_fn=get_input_fn(
       mode=tf.estimator.ModeKeys.EVAL,
@@ -296,17 +308,17 @@ if __name__ == "__main__":
   parser.add_argument(
       "--training_data",
       type=str,
-      default="",
+      default="/Users/we/PycharmProjects/models/tutorials/rnn/quickdraw/train_data/training.tfrecord-?????-of-?????",
       help="Path to training data (tf.Example in TFRecord format)")
   parser.add_argument(
       "--eval_data",
       type=str,
-      default="",
+      default="/Users/we/PycharmProjects/models/tutorials/rnn/quickdraw/train_data/eval.tfrecord-?????-of-?????",
       help="Path to evaluation data (tf.Example in TFRecord format)")
   parser.add_argument(
       "--classes_file",
       type=str,
-      default="",
+      default="/Users/we/PycharmProjects/models/tutorials/rnn/quickdraw/train_data/training.tfrecord.classes",
       help="Path to a file with the classes - one class per line")
   parser.add_argument(
       "--num_layers",
@@ -366,13 +378,18 @@ if __name__ == "__main__":
   parser.add_argument(
       "--model_dir",
       type=str,
-      default="",
+      default="/Users/we/PycharmProjects/models/tutorials/rnn/quickdraw/model_dir",
       help="Path for storing the model checkpoints.")
   parser.add_argument(
       "--self_test",
       type="bool",
       default="False",
       help="Whether to enable batch normalization or not.")
+  parser.add_argument(
+      "--tensorboard_debug_address",
+      type=str,
+      default="localhost:6005"
+  )
 
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

@@ -125,7 +125,8 @@ def convert_data(trainingdata_dir,
         tf.python_io.TFRecordWriter("%s-%05i-of-%05i" % (output_file, i,
                                                          output_shards)))
 
-  reading_order = range(len(file_handles)) * observations_per_class
+  # reading_order = range(len(file_handles)) * observations_per_class
+  reading_order = np.arange(0, len(file_handles)) # * observations_per_class
   random.shuffle(reading_order)
 
   for c in reading_order:
@@ -184,12 +185,12 @@ if __name__ == "__main__":
   parser.add_argument(
       "--ndjson_path",
       type=str,
-      default="",
+      default="/Users/we/PycharmProjects/models/tutorials/rnn/quickdraw/rnn_tutorial_data",
       help="Directory where the ndjson files are stored.")
   parser.add_argument(
       "--output_path",
       type=str,
-      default="",
+      default="/Users/we/PycharmProjects/models/tutorials/rnn/quickdraw/rnn_tutorial_data_parsed",
       help="Directory where to store the output TFRecord files.")
   parser.add_argument(
       "--train_observations_per_class",

@@ -184,11 +184,39 @@ def input_fn(data_file, num_epochs, shuffle, batch_size):
   dataset = dataset.batch(batch_size)
   return dataset
 
+def pred_input_fn(data_file, num_epochs, shuffle, batch_size):
+    assert tf.gfile.Exists(data_file), (
+        '%s not found.Please make sure you have run data_download.py and '
+        'set the --data_dir argument to the correct path.' % data_file)
 
-def exec_eval(flags, model, eval_input_fn):
-    results = model.evaluate(input_fn=eval_input_fn)
-    for key in sorted(results):
-        print('%s: %s' % (key, results[key]))
+    def parse_csv(value):
+        print('Parsing', data_file)
+        columns = tf.decode_csv(value, record_defaults=_CSV_COLUMN_DEFAULTS)
+        features = dict(zip(_CSV_COLUMNS, columns))
+        return features
+
+    # Extract lines from input files using the Dataset API.
+    dataset = tf.data.TextLineDataset(data_file)
+
+
+    dataset = dataset.map(parse_csv, num_parallel_calls=5)
+
+    # We call repeat after shuffling, rather than before, to prevent separate
+    # epochs from blending together.
+    dataset = dataset.repeat(num_epochs)
+    # dataset = dataset.batch(batch_size)
+    return dataset
+
+
+def exec_pred(flags, model, pred_input_fn):
+    # model.predict(
+    #     input_fn=pred_input_fn
+    # )
+    results = model.predict(input_fn=pred_input_fn)
+    for i, key in enumerate(results):
+        print(i, key)
+        if i == 100:
+            break
 
 
 
@@ -214,6 +242,9 @@ def main(argv):
   def eval_input_fn():
     return input_fn(test_file, 1, False, flags.batch_size)
 
+  def pred_input_fn():
+      return input_fn(test_file, 1, False, 1)
+
   # Graphs
   train_hooks = hooks_helper.get_train_hooks(
       flags.hooks, batch_size=flags.batch_size,
@@ -222,7 +253,7 @@ def main(argv):
 
   if flags.execute_type == "test":
 
-      exec_eval(flags, model, eval_input_fn)
+      exec_pred(flags, model, pred_input_fn)
 
       exit(0)
 
